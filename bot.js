@@ -83,6 +83,27 @@ async function addReferral(referrerId, referralId) {
     return false;
 }
 
+// Har 5 daqida bir so'rov yuborish
+setInterval(async () => {
+  try {
+    await axios.get('https://your-bot-url.onrender.com/health');
+    console.log('Ping yuborildi:', new Date().toLocaleString());
+  } catch (err) {
+    console.error('Ping xatosi:', err.message);
+  }
+}, 5 * 60 * 1000); // 5 daqida bir
+
+// Har 10 daqida bir faollikni tekshirish
+setInterval(() => {
+  console.log('Bot faol:', new Date().toLocaleString());
+  
+  // Agar MongoDB ulanganligini tekshirish
+  if (!client || !client.isConnected()) {
+    console.log('MongoDB ulanishi uzilgan, qayta ulanmoqda...');
+    connectDB().catch(console.error);
+  }
+}, 10 * 60 * 1000);
+
 // Withdrawal functions
 async function createWithdrawalRequest(userId, amount, cardNumber) {
     const user = await getUser(userId);
