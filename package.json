@@ -5,7 +5,8 @@
   "main": "bot.js",
   "scripts": {
     "start": "node server.js & node bot.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "concurrently \"node server.js\" \"node bot.js\""
   },
   "dependencies": {
     "dotenv": "^16.0.3",
@@ -15,5 +16,8 @@
   },
   "engines": {
     "node": ">=18.x"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
   }
 }

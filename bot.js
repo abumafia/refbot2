@@ -582,11 +582,25 @@ bot.command('setbalance', async (ctx) => {
     }
 });
 
-// Start the bot
-bot.launch().then(() => {
-    console.log('Bot started successfully');
-});
+// ... avvalgi kodlar ...
 
-// Enable graceful stop
+// Botni ishga tushirish
+async function startBot() {
+  try {
+    await connectDB();
+    await bot.launch();
+    console.log('Bot muvaffaqiyatli ishga tushdi');
+  } catch (err) {
+    console.error('Botni ishga tushirishda xatolik:', err);
+    process.exit(1);
+  }
+}
+
+// Faqat bitta instansiya ishlashini ta'minlash
+if (require.main === module) {
+  startBot();
+}
+
+// To'xtatish signallari
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));

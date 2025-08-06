@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: refbot2-web
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: BOT_TOKEN
+        fromGroup: env_vars
+      - key: MONGODB_URI
+        fromGroup: env_vars
+      - key: ADMIN_IDS
+        fromGroup: env_vars
+
+  - type: worker
+    name: refbot2-bot
+    env: node
+    buildCommand: npm install
+    startCommand: npm run bot
+    envVars:
+      - key: BOT_TOKEN
+        fromGroup: env_vars
+      - key: MONGODB_URI
+        fromGroup: env_vars
+      - key: ADMIN_IDS
+        fromGroup: env_vars
