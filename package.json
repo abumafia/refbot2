@@ -5,7 +5,7 @@
   "main": "bot.js",
   "scripts": {
     "start": "node server.js & node bot.js",
-    "watch": "nodemon bot.js"
+    "watch": "nodemon bot.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "concurrently \"node server.js\" \"node bot.js\""
   },
