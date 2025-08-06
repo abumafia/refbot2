@@ -16,6 +16,9 @@ async function connectDB() {
         await client.connect();
         db = client.db('referralBot');
         console.log('Connected to MongoDB');
+
+        // connectDB() funksiyasiga quyidagini qo'shing
+await db.createCollection('announcements');
         
         // Create indexes if they don't exist
         await db.collection('users').createIndex({ userId: 1 }, { unique: true });
@@ -297,12 +300,158 @@ bot.command('admin', async (ctx) => {
     if (ADMIN_IDS.includes(userId)) {
         const keyboard = Markup.inlineKeyboard([
             Markup.button.callback('Foydalanuvchilar ro\'yxati', 'user_list'),
+            Markup.button.callback('📢 E\'lon joylash', 'send_announcement'),
             Markup.button.callback('Admin panel', 'admin_panel')
         ]);
         
         await ctx.reply('Admin panel:', keyboard);
     }
 });
+
+// ... avvalgi kodlar o'zgarishsiz ...
+
+// Yangi funksiya
+async function getAnnouncements(limit = 10) {
+    return await db.collection('announcements')
+        .find()
+        .sort({ timestamp: -1 })
+        .limit(limit)
+        .toArray();
+}
+
+// Yangi handler
+bot.action('announcement_history', async (ctx) => {
+    if (!ADMIN_IDS.includes(ctx.from.id)) return;
+    
+    const announcements = await getAnnouncements();
+    let message = '📜 So\'nggi 10 e\'lon:\n\n';
+    
+    announcements.forEach((ann, i) => {
+        message += `${i+1}. ${new Date(ann.timestamp).toLocaleString()}\n`;
+        message += `Yuboruvchi: @${ann.adminUsername || 'noma\'lum'}\n`;
+        message += `Turi: ${ann.type}\n`;
+        if (ann.content.text) message += `Matn: ${ann.content.text.substring(0, 50)}...\n`;
+        message += '\n';
+    });
+    
+    await ctx.reply(message);
+});
+
+// Yangi funksiya: E'lonlarni saqlash uchun
+async function saveAnnouncement(announcement) {
+    await db.collection('announcements').insertOne({
+        ...announcement,
+        timestamp: new Date()
+    });
+}
+
+// Yangi funksiya: Barcha foydalanuvchilarga xabar yuborish
+async function broadcastMessage(bot, message, options = {}) {
+    const users = await db.collection('users').find().toArray();
+    for (const user of users) {
+        try {
+            await bot.telegram.sendMessage(user.userId, message, options);
+        } catch (err) {
+            console.error(`Xatolik foydalanuvchi ${user.userId} ga xabar yuborishda:`, err.message);
+        }
+        // 500ms kutish har bir xabar orasida (rate limit uchun)
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+}
+
+// Admin e'lon joylash komandasi
+bot.command('announce', async (ctx) => {
+    if (!ADMIN_IDS.includes(ctx.from.id)) return;
+    
+    await ctx.reply('Yangi e\'lon yuboring (matn, rasm, video yoki boshqa media):', {
+        reply_markup: {
+            keyboard: [['Bekor qilish']],
+            resize_keyboard: true,
+            one_time_keyboard: true
+        }
+    });
+    
+    // E'lon qabul qilish holatini saqlash
+    ctx.session.waitingForAnnouncement = true;
+});
+
+// E'lon qabul qilish
+bot.on(['text', 'photo', 'video', 'document'], async (ctx) => {
+    if (!ctx.session.waitingForAnnouncement || !ADMIN_IDS.includes(ctx.from.id)) return;
+    
+    if (ctx.message.text === 'Bekor qilish') {
+        delete ctx.session.waitingForAnnouncement;
+        await ctx.reply('E\'lon bekor qilindi.', Markup.removeKeyboard());
+        return;
+    }
+    
+    try {
+        // E'londan nusxa olish
+        const announcement = {
+            adminId: ctx.from.id,
+            adminUsername: ctx.from.username || ctx.from.first_name,
+            type: ctx.updateType,
+            content: {}
+        };
+        
+        // Turli xil kontent turlarini qayta ishlash
+        if (ctx.message.text) {
+            announcement.content.text = ctx.message.text;
+        }
+        
+        if (ctx.message.photo) {
+            announcement.content.photo = ctx.message.photo[ctx.message.photo.length - 1].file_id;
+        }
+        
+        if (ctx.message.video) {
+            announcement.content.video = ctx.message.video.file_id;
+        }
+        
+        if (ctx.message.document) {
+            announcement.content.document = ctx.message.document.file_id;
+        }
+        
+        // E'loni saqlash
+        await saveAnnouncement(announcement);
+        
+        // Barcha foydalanuvchilarga yuborish
+        await ctx.reply('E\'lon barcha foydalanuvchilarga yuborilmoqda...');
+        
+        let sentCount = 0;
+        let failedCount = 0;
+        
+        // Xabarni yuborish
+        if (ctx.message.text) {
+            await broadcastMessage(bot, ctx.message.text);
+        } else if (ctx.message.photo) {
+            await broadcastMessage(bot, '', {
+                photo: ctx.message.photo[ctx.message.photo.length - 1].file_id,
+                caption: ctx.message.caption
+            });
+        } else if (ctx.message.video) {
+            await broadcastMessage(bot, '', {
+                video: ctx.message.video.file_id,
+                caption: ctx.message.caption
+            });
+        } else if (ctx.message.document) {
+            await broadcastMessage(bot, '', {
+                document: ctx.message.document.file_id,
+                caption: ctx.message.caption
+            });
+        }
+        
+        await ctx.reply(`E'lon muvaffaqiyatli yuborildi!`);
+        
+    } catch (err) {
+        console.error('E\'lon yuborishda xatolik:', err);
+        await ctx.reply('E\'lon yuborishda xatolik yuz berdi. Iltimos, qayta urunib ko\'ring.');
+    } finally {
+        delete ctx.session.waitingForAnnouncement;
+        showMainMenu(ctx);
+    }
+});
+
+// ... qolgan kodlar o'zgarishsiz ...
 
 // Admin actions
 bot.action('user_list', async (ctx) => {
