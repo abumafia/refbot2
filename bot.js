@@ -391,8 +391,8 @@ bot.command('announce', async (ctx) => {
             one_time_keyboard: true
         }
     });
-    
-    // E'lon qabul qilish holatini saqlash
+
+        // E'lon qabul qilish holatini saqlash
     ctx.session.waitingForAnnouncement = true;
 });
 
@@ -473,7 +473,6 @@ bot.on(['text', 'photo', 'video', 'document'], async (ctx) => {
 });
 
 // ... qolgan kodlar o'zgarishsiz ...
-
 // Admin actions
 bot.action('user_list', async (ctx) => {
     if (ADMIN_IDS.includes(ctx.from.id)) {
