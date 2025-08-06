@@ -158,13 +158,13 @@ bot.start(async (ctx) => {
 
 function showMainMenu(ctx) {
     ctx.reply('Asosiy menyu:', Markup.keyboard([
-        ['👥 Do\'st taklif qilish', '💰 Balans'],
+        ['➕ Ishlash 💲', '💰 Balans'],
         ['🆘 Support', '📢 Yangiliklar kanali']
     ]).resize());
 }
 
 // Handle menu buttons
-bot.hears('👥 Do\'st taklif qilish', async (ctx) => {
+bot.hears('➕ Ishlash 💲', async (ctx) => {
     const userId = ctx.from.id;
     const referralLink = `https://t.me/${ctx.botInfo.username}?start=${userId}`;
     
